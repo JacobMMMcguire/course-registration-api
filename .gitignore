@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 venv/
+
+# Course-provided Phase 2 materials (not part of the service)
+sample_data/selftest/
+sample_data/student-example.html
+sample_data/student-example_files/
