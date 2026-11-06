@@ -6,3 +6,5 @@ venv/
 sample_data/selftest/
 sample_data/student-example.html
 sample_data/student-example_files/
+.coverage
+uvicorn.log

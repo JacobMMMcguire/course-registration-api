@@ -1,7 +1,8 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
-from app import student_storage
-from app.models import HistoryUpdate, PlanUpdate, StudentProfile
+from app import storage, student_storage
+from app.audit import build_audit_report
+from app.models import AuditReport, HistoryUpdate, PlanUpdate, StudentProfile
 from app.parsers.transcript_parser import parse_transcript_html
 
 router = APIRouter(prefix="/api/v1/students/{student_id}", tags=["students"])
@@ -89,3 +90,11 @@ def get_profile(student_id: str) -> StudentProfile:
     if profile is None:
         _require_student(student_id)
     return profile
+
+
+@router.get("/audit-report", response_model=AuditReport)
+def get_audit_report(student_id: str, strict: bool = False) -> AuditReport:
+    profile = student_storage.get_profile(student_id)
+    if profile is None:
+        _require_student(student_id)
+    return build_audit_report(profile, storage.get_course, strict=strict)

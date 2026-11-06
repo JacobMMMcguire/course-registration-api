@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from pydantic import BaseModel, Field
 
@@ -40,3 +40,29 @@ class StudentProfile(BaseModel):
     student_id: str
     history: List[PastCourse]
     plan: List[PlannedCourse]
+
+
+class AuditIssue(BaseModel):
+    course_code: str
+    type: str
+    message: str
+
+
+class TermValidation(BaseModel):
+    term: str
+    errors: List[AuditIssue]
+
+
+class CreditSummary(BaseModel):
+    # int | float so whole credit counts serialize as 90, not 90.0.
+    total_earned: Union[int, float]
+    total_planned: Union[int, float]
+    total_remaining_for_graduation: Union[int, float]
+
+
+class AuditReport(BaseModel):
+    student_id: str
+    status: str
+    timeline_validation: List[TermValidation]
+    cross_list_violations: List[AuditIssue]
+    credit_summary: CreditSummary

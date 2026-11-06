@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (flake8)
+        run: flake8 .
+
+      - name: Unit tests with coverage (fail under 80%)
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=80
+
+      - name: Integration tests against a booted API
+        env:
+          API_BASE_URL: http://127.0.0.1:8000
+        run: |
+          uvicorn main:app --host 127.0.0.1 --port 8000 > uvicorn.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf "$API_BASE_URL/docs" > /dev/null && break
+            sleep 1
+          done
+          status=0
+          pytest tests/integration -v --no-cov -rs || status=$?
+          echo "--- uvicorn log ---"; cat uvicorn.log
+          exit $status

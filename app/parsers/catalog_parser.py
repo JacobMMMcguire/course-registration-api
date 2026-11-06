@@ -5,21 +5,21 @@ from bs4 import BeautifulSoup
 
 from app.models import Course
 
-COURSE_CODE_PATTERN = re.compile(r"[A-Z]{2,4}\s?\d{3,4}[A-Z]?")
+COURSE_CODE_PATTERN = re.compile(r"[A-Z]{2,4}[\s-]?\d{3,4}[A-Z]?")
 
 # Matches catalog title lines such as:
 #   "CPSC 1046. Introduction to Computer Science. 3 Credits."
 TITLE_LINE_PATTERN = re.compile(
-    r"^\s*([A-Z]{2,4}\s?\d{3,4}[A-Z]?)\.\s*(.+?)\.\s*([\d.]+(?:\s*-\s*[\d.]+)?)\s*Credits?\.?\s*$"
+    r"^\s*([A-Z]{2,4}[\s-]?\d{3,4}[A-Z]?)\.\s*(.+?)\.\s*([\d.]+(?:\s*-\s*[\d.]+)?)\s*Credits?\.?\s*$"
 )
 
 LABEL_STOP_PATTERN = re.compile(r"Prerequisite|Cross[- ]?listed|Corequisite", re.IGNORECASE)
 
-# Splits a matched code into its letter and digit parts so "COSC1047" and
-# "COSC 1047" both normalize to "COSC 1047" — otherwise the same course could
+# Splits a matched code into its letter and digit parts so "COSC1047",
+# "COSC-1047", and "COSC 1047" all normalize to "COSC 1047" — otherwise the same course could
 # appear under two different-looking strings depending on how a catalog
 # happened to space it, which breaks exact-match lookups downstream.
-CODE_PARTS_PATTERN = re.compile(r"([A-Z]{2,4})\s?(\d{3,4}[A-Z]?)")
+CODE_PARTS_PATTERN = re.compile(r"([A-Z]{2,4})[\s-]?(\d{3,4}[A-Z]?)")
 
 
 def _normalize_code(code: str) -> str:
@@ -90,8 +90,8 @@ def _parse_tables(soup: BeautifulSoup) -> List[Course]:
             if not COURSE_CODE_PATTERN.fullmatch(code):
                 continue
 
-            prereq_text = cells[prereq_idx].get_text(" ", strip=True) if prereq_idx is not None and prereq_idx < len(cells) else ""
-            cross_text = cells[cross_idx].get_text(" ", strip=True) if cross_idx is not None and cross_idx < len(cells) else ""
+            prereq_text = _optional_cell(cells, prereq_idx)
+            cross_text = _optional_cell(cells, cross_idx)
 
             courses.append(
                 Course(
@@ -104,6 +104,12 @@ def _parse_tables(soup: BeautifulSoup) -> List[Course]:
             )
 
     return courses
+
+
+def _optional_cell(cells: list, index: "int | None") -> str:
+    if index is None or index >= len(cells):
+        return ""
+    return cells[index].get_text(" ", strip=True)
 
 
 def _find_column(headers: List[str], keyword: str) -> "int | None":

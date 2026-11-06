@@ -62,3 +62,46 @@ Example:
 curl -F "file=@student-example.html" http://localhost:8000/api/v1/students/111/history/import
 curl http://localhost:8000/api/v1/students/111/profile
 ```
+
+## Degree Audit
+
+`GET /api/v1/students/{student_id}/audit-report?strict=<bool>` checks the
+student's plan against their history and the imported catalog
+(`app/audit.py`):
+
+- **Prerequisites** — every catalog prerequisite of a planned course needs a
+  `Completed` history entry in a strictly earlier term (`W < SP < S < F`
+  within a year). Misses are reported as `MISSING_PREREQUISITE`, grouped by
+  planned term, in chronological order.
+- **Cross-listings** — planning a course cross-listed with a completed one
+  is a `CROSS_LIST_CONFLICT`.
+- **Credits** — `total_earned` counts each completed course once (retakes
+  aren't double-counted; non-completed attempts earn 0), `total_planned`
+  sums catalog credits, and `total_remaining_for_graduation` is
+  `max(0, 120 − earned − planned)`.
+
+`status` is `ok` with no issues; otherwise `warning`, or `failed` when
+`strict=true`. Course codes match regardless of case, spaces, or hyphens.
+
+```
+curl "http://localhost:8000/api/v1/students/111/audit-report?strict=true"
+```
+
+# Testing & CI
+
+```
+pip install -r requirements-dev.txt
+flake8 .
+pytest --cov=app --cov-fail-under=80
+```
+
+`tests/integration` runs against a live server and is skipped unless
+`API_BASE_URL` is set:
+
+```
+uvicorn main:app --port 8000 &
+API_BASE_URL=http://127.0.0.1:8000 pytest tests/integration --no-cov
+```
+
+`.github/workflows/ci.yml` runs all three steps (lint, coverage gate,
+booted-API integration tests) on every push and pull request.

@@ -8,20 +8,20 @@ from app.models import Course
 _courses: Dict[str, Course] = {}
 
 
-def _normalize(course_code: str) -> str:
-    # "COSC 3506", "COSC3506", and "cosc 3506" must all resolve to the same
-    # entry, since catalogs and callers don't agree on spacing.
-    return re.sub(r"\s+", "", course_code).upper()
+def normalize_code(course_code: str) -> str:
+    # "COSC 3506", "COSC-3506", and "cosc3506" must all resolve to the same
+    # entry, since the catalog, transcript, and plan don't agree on spacing.
+    return re.sub(r"[\s-]+", "", course_code).upper()
 
 
 def replace_courses(courses: List[Course]) -> None:
     _courses.clear()
     for course in courses:
-        _courses[_normalize(course.course_code)] = course
+        _courses[normalize_code(course.course_code)] = course
 
 
 def get_course(course_code: str) -> Optional[Course]:
-    return _courses.get(_normalize(course_code))
+    return _courses.get(normalize_code(course_code))
 
 
 def get_all_courses() -> List[Course]:
